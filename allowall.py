@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """一键全放行：把 su 装进 /sbin，让所有应用都能直接调用。
 
-通过临时把 rootfs 改成可写，把可执行的 su 复制到 /sbin（应用 PATH 的第一项）。
-全部只在内存里，重启即消失。
+安装的是 rootshell 的客户端形态：应用执行 /sbin/su 后，命令通过 socket
+交给全 capability 的守护进程执行，所以拿到的是完整 root（不是只能 setuid 的
+受限 root）。全部只在内存里，重启即消失。
 
     python allowall.py
     python allowall.py --serial <serial>
@@ -29,18 +30,17 @@ def adb(serial, *args, check=True, capture=False):
 
 
 def install(serial=""):
-    """把 su 装到 /sbin/su 并验证；成功返回 True。"""
-    # 源文件优先用 tmpfs 上的可执行副本，没有再用 .su.bin
-    src = f"S={D}/.su/su; [ -f \"$S\" ] || S={D}/.su.bin; "
-    body = (src + "mount -o remount,rw / && chmod 0755 /sbin && "
-            f"cp -f \"$S\" /sbin/su && chmod 4755 /sbin/su && "
+    """把 su 客户端装到 /sbin/su 并验证；成功返回 True。"""
+    # /sbin/su 是 rootshell 的客户端形态：命令转发给守护进程，拿完整 capability
+    body = ("mount -o remount,rw / && chmod 0755 /sbin && "
+            f"cp -f {D}/rootshell /sbin/su && chmod 0755 /sbin/su && "
             "mount -o remount,ro / && /sbin/su -c id")
     out = adb(serial, "shell", f"{D}/rootshell '{body}'", capture=True, check=False).stdout or ""
     print("  " + " | ".join(l for l in out.splitlines() if l.strip()))
 
     check = adb(serial, "shell", "/sbin/su -c id", capture=True, check=False).stdout or ""
     if "uid=0" in check:
-        print("[+] /sbin/su 已安装——任何应用都能直接执行 `su`")
+        print("[+] /sbin/su 已安装（daemon 客户端，完整 root）")
         return True
     return False
 

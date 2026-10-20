@@ -134,7 +134,12 @@ python allowall.py
 python deploy.py --allow-all
 ```
 
-之后应用和 adb shell 都能直接 `su -c ...`。只在本 boot 有效，重启后 `/sbin` 恢复只读、`su` 消失。
+`/sbin/su` 是 daemon 的客户端：`su -c "cmd"`、交互式 `su`、`su -v` 都支持，
+命令由全 capability 的守护进程执行。这点和 setuid 二进制不同——应用执行
+setuid-root 只能拿到自己的 bounding set（`0xc0`），绕不过 DAC，`ls /data`
+都会失败。
+
+只在本 boot 有效，重启后 `/sbin` 恢复只读、`su` 消失。
 
 ## 目录结构
 
