@@ -74,3 +74,9 @@ su
 
 预期行为。本方案不持久化：`selinux_enforcing`、`modprobe_path` 都在内存里，
 tmpfs 和 daemon 也随重启消失。
+
+## 全放行失败（`/sbin/su` 不存在或提权失败）
+
+- `mount -o remount,rw /` 在部分 ROM 上会被拒绝：确认当前确实有 root（`getenforce` 为 Permissive），再重试。
+- 写入成功但执行仍非 root：确认 `/sbin` 所在挂载没有 `nosuid`；被 nosuid 的话只能退回 tmpfs 覆盖 `/system/xbin`（会遮住原有命令）。
+- 重启后 `/sbin/su` 消失是预期行为。

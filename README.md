@@ -124,12 +124,25 @@ adb shell /data/local/tmp/rootshell "id; getenforce"
 
 socket root shell 的 SELinux 上下文是 `u:r:kernel:s0`（payload 由内核线程拉起）。
 
+### 全放行
+
+把 `su` 装进 `/sbin`（应用 `PATH` 的第一项），任何应用都能直接调用，没有授权弹窗：
+
+```bash
+python allowall.py
+# 或者部署时一步完成
+python deploy.py --allow-all
+```
+
+之后应用和 adb shell 都能直接 `su -c ...`。只在本 boot 有效，重启后 `/sbin` 恢复只读、`su` 消失。
+
 ## 目录结构
 
 ```
 old-phone-temp-root/
 ├── build.py              # NDK 交叉编译
 ├── deploy.py             # push + 利用 + 触发 + 验证
+├── allowall.py           # 一键全放行：把 su 装进 /sbin
 ├── cleanup.py            # 卸载 su tmpfs、清残留
 ├── src/
 │   ├── probe26.c         # CVE-2019-2215 利用（readv 自覆写链，一次链双写）

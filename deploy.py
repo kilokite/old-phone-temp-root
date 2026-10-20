@@ -30,6 +30,8 @@ def adb(serial, *args, check=True, capture=False):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--serial", default=os.environ.get("SERIAL", ""))
+    ap.add_argument("--allow-all", action="store_true",
+                    help="after success, install su into /sbin so any app can call it")
     args = ap.parse_args()
 
     bindir = os.path.join(ROOT, "bin")
@@ -76,11 +78,22 @@ def main():
     if not ok:
         sys.exit("[!] root verification failed; see docs/TROUBLESHOOTING.md")
 
+    if args.allow_all:
+        print("\n[*] allow-all: installing su into /sbin")
+        sys.path.insert(0, ROOT)
+        import allowall
+        if not allowall.install(args.serial):
+            sys.exit("[!] allow-all failed — see docs/TROUBLESHOOTING.md")
+
     print("\n[+] done.  interactive root shell:")
     print(f"      adb {('-s ' + args.serial + ' ') if args.serial else ''}shell {D}/rootshell")
-    print("    or su (it is NOT in PATH, nothing is written to /system):")
-    print(f"      adb {('-s ' + args.serial + ' ') if args.serial else ''}shell {D}/.su/su")
-    print(f"      adb {('-s ' + args.serial + ' ') if args.serial else ''}shell 'export PATH={D}/.su:$PATH; su'")
+    if args.allow_all:
+        print("    or su (installed in /sbin, available to every app):")
+        print(f"      adb {('-s ' + args.serial + ' ') if args.serial else ''}shell su -c id")
+    else:
+        print("    or su (it is NOT in PATH, nothing is written to /system):")
+        print(f"      adb {('-s ' + args.serial + ' ') if args.serial else ''}shell {D}/.su/su")
+        print(f"      adb {('-s ' + args.serial + ' ') if args.serial else ''}shell 'export PATH={D}/.su:$PATH; su'")
     print("\n[!] per-boot only: reboot restores SELinux Enforcing and modprobe_path.")
 
 

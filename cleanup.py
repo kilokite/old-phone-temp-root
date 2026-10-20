@@ -26,9 +26,12 @@ def main():
     adb(args.serial, "wait-for-device")
     print("[*] unmounting su tmpfs")
     adb(args.serial, "shell", f"{D}/rootshell 'umount {D}/.su'")
+    print("[*] removing /sbin/su")
+    adb(args.serial, "shell", f"{D}/rootshell 'rm -f /sbin/su'")
     print("[*] removing files")
     adb(args.serial, "shell",
-        f"rm -rf {D}/.su {D}/.rs {D}/*.log {D}/wb.sh {D}/probe26 {D}/trig_sock {D}/rootshell {D}/su")
+        f"rm -rf {D}/.su {D}/.rs {D}/*.log {D}/.payload_ran {D}/.su.bin "
+        f"{D}/wb.sh {D}/probe26 {D}/trig_sock {D}/rootshell {D}/su")
     print("[!] reboot to restore SELinux Enforcing and the original modprobe_path:")
     print(f"      adb {('-s ' + args.serial + ' ') if args.serial else ''}reboot")
 
