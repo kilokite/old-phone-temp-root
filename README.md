@@ -124,22 +124,31 @@ adb shell /data/local/tmp/rootshell "id; getenforce"
 
 socket root shell 的 SELinux 上下文是 `u:r:kernel:s0`（payload 由内核线程拉起）。
 
-### 全放行
+### 装 su 给应用（两种）
 
-把 `su` 装进 `/sbin`（应用 `PATH` 的第一项），任何应用都能直接调用，没有授权弹窗：
+两种都是把 `su` 放进 `/sbin`（应用 `PATH` 的第一项），区别在权限范围。
+
+**A. setuid 版（受限 root）**
 
 ```bash
 python allowall.py
-# 或者部署时一步完成
-python deploy.py --allow-all
 ```
 
-`/sbin/su` 是 daemon 的客户端：`su -c "cmd"`、交互式 `su`、`su -v` 都支持，
-命令由全 capability 的守护进程执行。这点和 setuid 二进制不同——应用执行
-setuid-root 只能拿到自己的 bounding set（`0xc0`），绕不过 DAC，`ls /data`
-都会失败。
+应用能 setuid 到 0，但 capability 只有自己的 bounding set（`0xc0`），
+绕不过 DAC——`ls /data` 会失败。
 
-只在本 boot 有效，重启后 `/sbin` 恢复只读、`su` 消失。
+**B. 客户端版（完整 root，推荐）**
+
+```bash
+python suclient.py
+```
+
+`/sbin/su` 是 daemon 的客户端，命令交给全 capability（`0x3fffffffff`）的
+守护进程执行；支持 `su -c`、交互式 `su`、`su -v`。
+
+部署时也可以一步完成：`python deploy.py --allow-all` 或 `python deploy.py --suclient`。
+
+两种都只在本 boot 有效，重启后 `/sbin` 恢复只读、`su` 消失。
 
 ## 目录结构
 
@@ -147,7 +156,8 @@ setuid-root 只能拿到自己的 bounding set（`0xc0`），绕不过 DAC，`ls
 old-phone-temp-root/
 ├── build.py              # NDK 交叉编译
 ├── deploy.py             # push + 利用 + 触发 + 验证
-├── allowall.py           # 一键全放行：把 su 装进 /sbin
+├── allowall.py           # setuid su 装进 /sbin（受限 root）
+├── suclient.py           # 客户端 su 装进 /sbin（完整 root）
 ├── cleanup.py            # 卸载 su tmpfs、清残留
 ├── src/
 │   ├── probe26.c         # CVE-2019-2215 利用（readv 自覆写链，一次链双写）

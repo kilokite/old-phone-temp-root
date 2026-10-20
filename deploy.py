@@ -31,7 +31,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--serial", default=os.environ.get("SERIAL", ""))
     ap.add_argument("--allow-all", action="store_true",
-                    help="成功后把 su 装进 /sbin，所有应用可直接调用")
+                    help="成功后把 setuid su 装进 /sbin（受限 root）")
+    ap.add_argument("--suclient", action="store_true",
+                    help="成功后把客户端 su 装进 /sbin（完整 capability）")
     args = ap.parse_args()
 
     bindir = os.path.join(ROOT, "bin")
@@ -79,15 +81,22 @@ def main():
         sys.exit("[!] 提权验证失败，见 docs/TROUBLESHOOTING.md")
 
     if args.allow_all:
-        print("\n[*] 全放行：把 su 装进 /sbin")
+        print("\n[*] 全放行：把 setuid su 装进 /sbin")
         sys.path.insert(0, ROOT)
         import allowall
         if not allowall.install(args.serial):
             sys.exit("[!] 全放行失败，见 docs/TROUBLESHOOTING.md")
 
+    if args.suclient:
+        print("\n[*] 客户端 su：把 rootshell 装进 /sbin")
+        sys.path.insert(0, ROOT)
+        import suclient
+        if not suclient.install(args.serial):
+            sys.exit("[!] 客户端 su 安装失败，见 docs/TROUBLESHOOTING.md")
+
     print("\n[+] 完成。交互式 root shell：")
     print(f"      adb {('-s ' + args.serial + ' ') if args.serial else ''}shell {D}/rootshell")
-    if args.allow_all:
+    if args.allow_all or args.suclient:
         print("    或者 su（已装进 /sbin，所有应用可用）：")
         print(f"      adb {('-s ' + args.serial + ' ') if args.serial else ''}shell su -c id")
     else:
