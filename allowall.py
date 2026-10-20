@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""One-shot "allow all": put su into PATH so every app can call it.
+"""一键全放行：把 su 装进 /sbin，让所有应用都能直接调用。
 
-Installs the runnable su at /sbin/su (first entry of the Android app PATH) by
-remounting the rootfs rw.  Everything stays in RAM; a reboot removes it.
+通过临时把 rootfs 改成可写，把可执行的 su 复制到 /sbin（应用 PATH 的第一项）。
+全部只在内存里，重启即消失。
 
     python allowall.py
     python allowall.py --serial <serial>
 
-Requires root in the current boot (run deploy.py first).
+前提：本次开机已经有 root（先跑 deploy.py）。
 """
 import argparse
 import os
@@ -18,6 +18,7 @@ D = "/data/local/tmp"
 
 
 def adb(serial, *args, check=True, capture=False):
+    """调用 adb，统一 UTF-8 解码。"""
     cmd = [os.environ.get("ADB", "adb")]
     if serial:
         cmd += ["-s", serial]
@@ -28,7 +29,8 @@ def adb(serial, *args, check=True, capture=False):
 
 
 def install(serial=""):
-    """Install su into /sbin. Returns True on success."""
+    """把 su 装到 /sbin/su 并验证；成功返回 True。"""
+    # 源文件优先用 tmpfs 上的可执行副本，没有再用 .su.bin
     src = f"S={D}/.su/su; [ -f \"$S\" ] || S={D}/.su.bin; "
     body = (src + "mount -o remount,rw / && chmod 0755 /sbin && "
             f"cp -f \"$S\" /sbin/su && chmod 4755 /sbin/su && "
@@ -38,7 +40,7 @@ def install(serial=""):
 
     check = adb(serial, "shell", "/sbin/su -c id", capture=True, check=False).stdout or ""
     if "uid=0" in check:
-        print("[+] /sbin/su installed — any app can now exec `su`")
+        print("[+] /sbin/su 已安装——任何应用都能直接执行 `su`")
         return True
     return False
 
@@ -51,12 +53,12 @@ def main():
     adb(args.serial, "wait-for-device")
     who = adb(args.serial, "shell", f"{D}/.su/su -c id", capture=True, check=False).stdout or ""
     if "uid=0" not in who:
-        sys.exit("[!] no root in this boot — run deploy.py first")
+        sys.exit("[!] 本次开机还没有 root——先运行 deploy.py")
 
-    print("[*] installing su into /sbin (PATH for all apps)")
+    print("[*] 把 su 装进 /sbin（所有应用的 PATH）")
     if not install(args.serial):
-        sys.exit("[!] install failed — see docs/TROUBLESHOOTING.md")
-    print("[*] try: adb shell su -c id")
+        sys.exit("[!] 安装失败，见 docs/TROUBLESHOOTING.md")
+    print("[*] 试试：adb shell su -c id")
 
 
 if __name__ == "__main__":
