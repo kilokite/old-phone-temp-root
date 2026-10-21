@@ -1,4 +1,9 @@
 bin/
+build/
+dist/
 *.log
 .last-run.log
 __pycache__/
+app/assets/arm64-v8a/
+app/assets/wb.sh.in
+app/debug.keystore

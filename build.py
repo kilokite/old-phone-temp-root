@@ -80,8 +80,7 @@ def main(argv):
     targets = {
         "probe26": ["src/probe26.c"] + defines,
         "trig_sock": ["src/trig_sock.c"],
-        "rootshell": ["src/rootshell.c"],
-        "su": ["src/su.c"],
+        "suvd": ["src/suvd.c"],
     }
     for name, srcs in targets.items():
         out = os.path.join(bindir, name)

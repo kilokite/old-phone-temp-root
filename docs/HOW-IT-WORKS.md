@@ -105,8 +105,7 @@ struct binder_thread {
 
 ## 7. 收尾
 
-`modprobe_path` 指向 `/data/local/tmp/wb.sh`。用
-`socket(30, SOCK_STREAM, 0)` 请求一个未注册协议族：
+`modprobe_path` 指向 `wb.sh`。用 `socket(30, SOCK_STREAM, 0)` 请求一个未注册协议族：
 
 ```
 __sock_create -> request_module("net-pf-30") -> call_usermodehelper()
@@ -114,10 +113,15 @@ __sock_create -> request_module("net-pf-30") -> call_usermodehelper()
 
 内核以 uid 0 / `u:r:kernel:s0` 执行 payload。`wb.sh` 会：
 
-1. 在 `/data/local/tmp/.su` 挂一个 tmpfs（`/data` 是 nosuid，setuid 只在
-   tmpfs 上有效）；
-2. 把 `su` 拷进去并 `chmod 4755`；
-3. 起 `rootshell -d`，在 `/data/local/tmp/.rs` 上提供一个 root shell。
+1. 在 `/data/local/tmp/.su` 挂一个 tmpfs（`/data` 是 nosuid，setuid 不可靠）；
+2. 把 `suvd` 拷进去（先写 `.new` 再 `mv`，避免覆盖正在运行的二进制）；
+3. 把 `/sbin/su` 指向 `suvd`，并把 `/sbin` 从 `0750` 放开到 `0755`；
+4. 以管理 App 的包名/uid 启动授权守护进程 `suvd -d --manager ...`。
+
+`su` 客户端不依赖 setuid：它以调用者 uid 运行，连守护进程的 unix socket，
+由守护进程完成授权并以 uid 0 + 全 capability 执行。授权框由守护进程切换
+`u:r:shell:s0`、降权到 uid 2000 后 `am start` 拉起（绕开 MIUI 的后台
+Activity 拦截）。细节见 [AUTHORIZATION.md](AUTHORIZATION.md)。
 
 ## 8. 硬约束
 
@@ -141,3 +145,8 @@ ffffffc002283174 B selinux_enforcing
 ```
 
 换内核时用同样的方法重新取，不需要改结构体逻辑。
+
+## 10. 授权层
+
+漏洞只负责拿到一次内核写和 root payload；root 拿到之后怎么给应用用、怎么弹窗、
+怎么记住选择，见 [AUTHORIZATION.md](AUTHORIZATION.md)。
